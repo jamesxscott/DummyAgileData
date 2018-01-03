@@ -1,5 +1,6 @@
 from random import *
 import datetime
+import os
 
 numStories=20
 numDevs=5
@@ -55,6 +56,9 @@ for j in range(0,len(DevTime[i])): #for each day
   DevTime[7][j]=sum([1 for x in CumuFlow[2] if x > 0]) #CountWIP
   DevTime[8][j]=sum([1 for x in CumuFlow[3] if x > 0]) #CountReview
   DevTime[9][j]=sum([1 for x in CumuFlow[6] if x > 0]) #CountDone
+  if j==50:
+    printDevTime()
+    os.system('pause')
   for i in range(0,5): #for each developer
     #find max remaining work to be reviewed <= developer capacity
     if max(CumuFlow[3])>0: #there is some story to reviewed
