@@ -24,8 +24,9 @@ def printDevTime():
     for j in range(lengthDevTime):
       print "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"  %(DevTime[0][j],DevTime[6][j],DevTime[7][j],DevTime[8][j],DevTime[9][j],DevTime[1][j],DevTime[2][j],DevTime[3][j],DevTime[4][j],DevTime[5][j])
 
-def workOnStories(currentDate, phase, devID):
-    indexCurrentDate=DevTime[0].index(currentDate)
+def workOnStories(theDate, phase, devID):
+    indexCurrentDate=DevTime[0].index(theDate)
+
     if phase == "Review":
         phaseWorkColumn=3
         phaseCompletedColumn=7
@@ -42,16 +43,16 @@ def workOnStories(currentDate, phase, devID):
       indexMaxWorkToDo=CumuFlow[phaseWorkColumn].index(max(CumuFlow[phaseWorkColumn]))
 
       #subtract devtime from cumuflow
-      CumuFlow[phaseWorkColumn][indexMaxWorkToDo]=CumuFlow[phaseWorkColumn][indexMaxWorkToDo]-DevTime[i+1][j]
+      CumuFlow[phaseWorkColumn][indexMaxWorkToDo]=CumuFlow[phaseWorkColumn][indexMaxWorkToDo]-DevTime[i+1][indexCurrentDate]
 
       #if cumuflow is >= 0 then DevTime is 0 else DevTime=abs(CumuFlow);CumuFlow=0
       if CumuFlow[phaseWorkColumn][indexMaxWorkToDo]>=0:
-        DevTime[i+1][j]=0
+        DevTime[i+1][indexCurrentDate]=0
       else:
-        DevTime[i+1][j]=abs(CumuFlow[phaseWorkColumn][indexMaxWorkToDo])
+        DevTime[i+1][indexCurrentDate]=abs(CumuFlow[phaseWorkColumn][indexMaxWorkToDo])
         CumuFlow[phaseWorkColumn][indexMaxWorkToDo]=0
       if CumuFlow[phaseWorkColumn][indexMaxWorkToDo]==0: #phase complete
-        CumuFlow[phaseCompletedColumn][indexMaxWorkToDo]=DevTime[0][j].strftime('%d/%m/%Y') #note date complete
+        CumuFlow[phaseCompletedColumn][indexMaxWorkToDo]=DevTime[0][indexCurrentDate] #note date complete
         if phase=="InProgress":
             CumuFlow[phaseWorkColumn+1][indexMaxWorkToDo]=randint(Review_From,Review_To) #generate Review randomized value
         elif phase=="Groom":
@@ -62,15 +63,15 @@ def workOnStories(currentDate, phase, devID):
 for i in range(len(CumuFlow[0])):
   CumuFlow[0][i]="Story ID"+str(i+1)                #assign issue ID's for initial stories
   CumuFlow[1][i]=randint(4,16)                      #assign Ready times (hours) for initial stories, between 4 and 16 hours
-  CumuFlow[4][i]=startDate.strftime('%d/%m/%Y')     #set created date for initial stories
+  CumuFlow[4][i]=startDate                          #set created date for initial stories
 
- # set up randomized values for developer capacity in DevTime
+# set up randomized values for developer capacity in DevTime
 for i in range(1,len(DevTime)-4):
   for j in range(len(DevTime[i])):
     if absenceLength==0 and randint(1,100) < 20: #chance of developer absence (if not already absent)
       absenceLength=randint(1,4) #length of developer absence (days)
 
-    DevTime[0][j]=startDate + datetime.timedelta(days=j)
+    DevTime[0][j]=(startDate + datetime.timedelta(days=j))
     
     if absenceLength > 0:
       DevTime[i][j]=0
@@ -85,24 +86,29 @@ printDevTime()
 #---------------------------------------------------------------------------------------  
 #main loop - complete stories
 #for each date - for each developer - work on story to complete phase
-for j in range(0,len(DevTime[i])): #for each day
+
+currentDate=startDate
+while max(CumuFlow[1])+max(CumuFlow[2])+max(CumuFlow[3])>0: #work remaining
+  indexCurrentDate=DevTime[0].index(currentDate)
+
+  for i in range(0,numDevs): #for each developer on given day
+      workOnStories(theDate = currentDate, phase = "Review", devID = i+1)
+      workOnStories(theDate = currentDate, phase = "InProgress", devID = i+1)
+      workOnStories(theDate = currentDate, phase = "Groom", devID = i+1)
+
   #track numbers in each phase for each day
-  DevTime[6][j]=sum([1 for x in CumuFlow[1] if x > 0]) #CountGrooming
-  DevTime[7][j]=sum([1 for x in CumuFlow[2] if x > 0]) #CountWIP
-  DevTime[8][j]=sum([1 for x in CumuFlow[3] if x > 0]) #CountReview
-  DevTime[9][j]=sum([1 for x in CumuFlow[6] if x > 0]) #CountDone
-  #if j==50:
-  #  printDevTime()
-  #  os.system('pause') #pause so can capture table after 50 days and work out estimate of completion date
-    
-  for i in range(0,numDevs): #for each developer
-      workOnStories(currentDate = DevTime[0][j], phase = "Review", devID = i+1)
-      workOnStories(currentDate = DevTime[0][j], phase = "InProgress", devID = i+1)
-      workOnStories(currentDate = DevTime[0][j], phase = "Groom", devID = i+1)
+  DevTime[6][indexCurrentDate]=sum([1 for x in CumuFlow[1] if x > 0]) #CountGrooming
+  DevTime[7][indexCurrentDate]=sum([1 for x in CumuFlow[2] if x > 0]) #CountWIP
+  DevTime[8][indexCurrentDate]=sum([1 for x in CumuFlow[3] if x > 0]) #CountReview
+  DevTime[9][indexCurrentDate]=sum([1 for x in CumuFlow[7] if x <>0]) #CountDone
+   
+  currentDate=currentDate + datetime.timedelta(days=1) 
+  if currentDate not in DevTime[0]:
+    break
       
 printCumuFlow()
 printDevTime()
-if max(CumuFlow[1])+max(CumuFlow[2])+max(CumuFlow[3])>0:
-    print "Project ran out of time"
+if max(CumuFlow[1])+max(CumuFlow[2])+max(CumuFlow[3])==0:
+    print "Project completed on %s" %(CumuFlow[7][CumuFlow[7].index(max(CumuFlow[7]))]).strftime("%d/%m/%Y")
 else:
-    print "Project completed on %s" %(max(CumuFlow[7]))
+        print "Project ran out of time"
