@@ -2,7 +2,7 @@ from random import *
 import datetime
 import os
 
-numStories=20
+numStories=15
 numDevs=5
 lengthDevDays=120
 CumuFlow=[[0 for j in range(numStories)] for i in range(8)] #IssueID,ReadyHrs,InProgressHrs,InReviewHrs,Created,ReadyCmp,InProgressCmp,ReviewCmp
@@ -15,7 +15,7 @@ Review_To=8
 
 def printCumuFlow():
     print "IssueID,ReadyHrs,InProgressHrs,InReviewHrs,Created,ReadyCmp,InProgressCmp,ReviewCmp"
-    for j in range(20):
+    for j in range(len(CumuFlow[0])):
       print "%s,%s,%s,%s,%s,%s,%s,%s"  %(CumuFlow[0][j],CumuFlow[1][j],CumuFlow[2][j],CumuFlow[3][j],CumuFlow[4][j],CumuFlow[5][j],CumuFlow[6][j],CumuFlow[7][j])
 
 def printDevTime():  
@@ -56,6 +56,17 @@ def workOnStories(theDate, phase, devID):
             CumuFlow[phaseWorkColumn+1][indexMaxWorkToDo]=randint(Review_From,Review_To) #generate Review randomized value
         elif phase=="Groom":
             CumuFlow[phaseWorkColumn+1][indexMaxWorkToDo]=randint(InProgress_From,InProgress_To) #generate Work In Progress randomized value
+        elif phase=="Review": #issue completed
+            if randint(1,10)<=3: #chance of bug being found
+                #print "#create new bug"
+                CumuFlow[0].append("Bug for " + CumuFlow[0][indexMaxWorkToDo])
+                CumuFlow[1].append(randint(8,32)) #amount of work for the bug
+                CumuFlow[2].append(0)
+                CumuFlow[3].append(0)
+                CumuFlow[4].append(theDate) #bug creation date
+                CumuFlow[5].append(0)
+                CumuFlow[6].append(0)
+                CumuFlow[7].append(0)
       
 def initialiseCumuFlow():      
     # set up randomized values for initial stories in CumuFlow
