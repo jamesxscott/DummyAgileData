@@ -23,6 +23,39 @@ def printDevTime():
     print "Date, Dev#1,Dev#2,Dev#3,Dev#4,Dev#5,CountGrooming,CountWIP,CountReview,CountDone"
     for j in range(lengthDevTime):
       print "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"  %(DevTime[0][j],DevTime[6][j],DevTime[7][j],DevTime[8][j],DevTime[9][j],DevTime[1][j],DevTime[2][j],DevTime[3][j],DevTime[4][j],DevTime[5][j])
+
+def workOnStories(currentDate, phase, devID):
+    indexCurrentDate=DevTime[0].index(currentDate)
+    if phase == "Review":
+        phaseWorkColumn=3
+        phaseCompletedColumn=6
+    elif phase == "InProgress":
+        phaseWorkColumn=2
+        phaseCompletedColumn=5
+    elif phase == "Groom":
+        phaseWorkColumn=1
+        phaseCompletedColumn=4
+    else:
+        return
+        
+    while DevTime[devID][indexCurrentDate]>0 and max(CumuFlow[phaseWorkColumn])>0:
+      indexMaxWorkToDo=CumuFlow[phaseWorkColumn].index(max(CumuFlow[phaseWorkColumn]))
+
+      #subtract devtime from cumuflow
+      CumuFlow[phaseWorkColumn][indexMaxWorkToDo]=CumuFlow[phaseWorkColumn][indexMaxWorkToDo]-DevTime[i+1][j]
+
+      #if cumuflow is >= 0 then DevTime is 0 else DevTime=abs(CumuFlow);CumuFlow=0
+      if CumuFlow[phaseWorkColumn][indexMaxWorkToDo]>=0:
+        DevTime[i+1][j]=0
+      else:
+        DevTime[i+1][j]=abs(CumuFlow[phaseWorkColumn][indexMaxWorkToDo])
+        CumuFlow[phaseWorkColumn][indexMaxWorkToDo]=0
+      if CumuFlow[phaseWorkColumn][indexMaxWorkToDo]==0: #phase complete
+        CumuFlow[phaseCompletedColumn][indexMaxWorkToDo]=DevTime[0][j].strftime('%d/%m/%Y') #note date complete
+        if phase=="InProgress":
+            CumuFlow[phaseWorkColumn+1][indexMaxWorkToDo]=randint(Review_From,Review_To) #generate Review randomized value
+        elif phase=="Groom":
+            CumuFlow[phaseWorkColumn+1][indexMaxWorkToDo]=randint(InProgress_From,InProgress_To) #generate Work In Progress randomized value
       
       
 # set up randomized values for initial stories in CumuFlow
@@ -47,7 +80,8 @@ for i in range(1,len(DevTime)-4):
 #print initial state
 printCumuFlow()
 printDevTime()
-  
+
+#---------------------------------------------------------------------------------------  
 #main loop - complete stories
 #for each date - for each developer - work on story to complete phase
 for j in range(0,len(DevTime[i])): #for each day
@@ -56,56 +90,27 @@ for j in range(0,len(DevTime[i])): #for each day
   DevTime[7][j]=sum([1 for x in CumuFlow[2] if x > 0]) #CountWIP
   DevTime[8][j]=sum([1 for x in CumuFlow[3] if x > 0]) #CountReview
   DevTime[9][j]=sum([1 for x in CumuFlow[6] if x > 0]) #CountDone
-  if j==50:
-    printDevTime()
-    os.system('pause')
-  for i in range(0,5): #for each developer
-    #find max remaining work to be reviewed <= developer capacity
-    if max(CumuFlow[3])>0: #there is some story to reviewed
-      while DevTime[i+1][j]>0 and max(CumuFlow[3])>0:
-        indexMaxWorkToDo=CumuFlow[3].index(max(CumuFlow[3]))
-        #print "Dev%i - getting %s Ready with %i hours capacity on %s" %(i+1,CumuFlow[0][indexMaxWorkToDo],DevTime[i+1][j],DevTime[0][j])
-        #subtract devtime from cumuflow
-        CumuFlow[3][indexMaxWorkToDo]=CumuFlow[3][indexMaxWorkToDo]-DevTime[i+1][j]
-        #if cumuflow is >= 0 then DevTime is 0 else DevTime=abs(CumuFlow);CumuFlow=0
-        if CumuFlow[3][indexMaxWorkToDo]>=0:
-          DevTime[i+1][j]=0
-        else:
-          DevTime[i+1][j]=abs(CumuFlow[3][indexMaxWorkToDo])
-          CumuFlow[3][indexMaxWorkToDo]=0
-        if CumuFlow[3][indexMaxWorkToDo]==0: #phase complete
-          CumuFlow[6][indexMaxWorkToDo]=DevTime[0][j].strftime('%d/%m/%Y') #note date complete
-    elif max(CumuFlow[2])>0: #there is some story in progress to work on
-      while DevTime[i+1][j]>0 and max(CumuFlow[2])>0:
-        indexMaxWorkToDo=CumuFlow[2].index(max(CumuFlow[2]))
-        #print "Dev%i - getting %s Ready with %i hours capacity on %s" %(i+1,CumuFlow[0][indexMaxWorkToDo],DevTime[i+1][j],DevTime[0][j])
-        #subtract devtime from cumuflow
-        CumuFlow[2][indexMaxWorkToDo]=CumuFlow[2][indexMaxWorkToDo]-DevTime[i+1][j]
-        #if cumuflow is >= 0 then DevTime is 0 else DevTime=abs(CumuFlow);CumuFlow=0
-        if CumuFlow[2][indexMaxWorkToDo]>=0:
-          DevTime[i+1][j]=0
-        else:
-          DevTime[i+1][j]=abs(CumuFlow[2][indexMaxWorkToDo])
-          CumuFlow[2][indexMaxWorkToDo]=0
-        if CumuFlow[2][indexMaxWorkToDo]==0: #phase complete
-          CumuFlow[5][indexMaxWorkToDo]=DevTime[0][j].strftime('%d/%m/%Y') #note date complete
-          CumuFlow[3][indexMaxWorkToDo]=randint(Review_From,Review_To) #generate Review randomized value
-    elif max(CumuFlow[1])>0: #there are stories to get ready
-      while DevTime[i+1][j]>0 and max(CumuFlow[1])>0:
-        indexMaxWorkToDo=CumuFlow[1].index(max(CumuFlow[1]))
-        #print "Dev%i - getting %s Ready with %i hours capacity on %s" %(i+1,CumuFlow[0][indexMaxWorkToDo],DevTime[i+1][j],DevTime[0][j])
-        #subtract devtime from cumuflow
-        CumuFlow[1][indexMaxWorkToDo]=CumuFlow[1][indexMaxWorkToDo]-DevTime[i+1][j]
-        #if cumuflow is >= 0 then DevTime is 0 else DevTime=abs(CumuFlow);CumuFlow=0
-        if CumuFlow[1][indexMaxWorkToDo]>=0:
-          DevTime[i+1][j]=0
-        else:
-          DevTime[i+1][j]=abs(CumuFlow[1][indexMaxWorkToDo])
-          CumuFlow[1][indexMaxWorkToDo]=0
-        if CumuFlow[1][indexMaxWorkToDo]==0: #phase complete
-          CumuFlow[4][indexMaxWorkToDo]=DevTime[0][j].strftime('%d/%m/%Y') #note date complete
-          CumuFlow[2][indexMaxWorkToDo]=randint(InProgress_From,InProgress_To) #generate Work In Progress randomized value
-
+  #if j==50:
+  #  printDevTime()
+  #  os.system('pause')
+  
+  #TODO add best/worst/guess framework and output results for each
+  #TODO add blocker randomization
+  #TODO add date created column and populate it
+  #TODO add bug creation
+  #TODO add new story creation
+  #TODO add system testing and user acceptance
+  #TODO add frequency bins columns
+  #TODO after set threshold, calculate (daily) expected completion date using extrapolation of stories done rate
+  #TODO after same threshold, calculate (daily) expected completion date using frequency bins
+  #TODO add csv output
+  #TODO add graph output
+  
+  for i in range(0,numDevs): #for each developer
+      workOnStories(currentDate = DevTime[0][j], phase = "Review", devID = i+1)
+      workOnStories(currentDate = DevTime[0][j], phase = "InProgress", devID = i+1)
+      workOnStories(currentDate = DevTime[0][j], phase = "Groom", devID = i+1)
+      
 printCumuFlow()
 printDevTime()
 if max(CumuFlow[1])+max(CumuFlow[2])+max(CumuFlow[3])>0:
