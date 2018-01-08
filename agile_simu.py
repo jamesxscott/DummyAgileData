@@ -4,10 +4,9 @@ import os
 
 numStories=20
 numDevs=5
-lengthDevTime=100
-absenceLength=0
+lengthDevDays=120
 CumuFlow=[[0 for j in range(numStories)] for i in range(8)] #IssueID,ReadyHrs,InProgressHrs,InReviewHrs,Created,ReadyCmp,InProgressCmp,ReviewCmp
-DevTime=[[0 for j in range(lengthDevTime)] for i in range(numDevs+5)] # + Date, CountGrooming,CountWIP,CountReview,CountDone
+DevTime=[[0 for j in range(lengthDevDays)] for i in range(numDevs+5)] # + Date, CountGrooming,CountWIP,CountReview,CountDone
 startDate=datetime.datetime(2017,12,1)
 InProgress_From=8
 InProgress_To=80
@@ -21,7 +20,7 @@ def printCumuFlow():
 
 def printDevTime():  
     print "Date, Dev#1,Dev#2,Dev#3,Dev#4,Dev#5,CountGrooming,CountWIP,CountReview,CountDone"
-    for j in range(lengthDevTime):
+    for j in range(lengthDevDays):
       print "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"  %(DevTime[0][j],DevTime[6][j],DevTime[7][j],DevTime[8][j],DevTime[9][j],DevTime[1][j],DevTime[2][j],DevTime[3][j],DevTime[4][j],DevTime[5][j])
 
 def workOnStories(theDate, phase, devID):
@@ -58,35 +57,46 @@ def workOnStories(theDate, phase, devID):
         elif phase=="Groom":
             CumuFlow[phaseWorkColumn+1][indexMaxWorkToDo]=randint(InProgress_From,InProgress_To) #generate Work In Progress randomized value
       
-      
-# set up randomized values for initial stories in CumuFlow
-for i in range(len(CumuFlow[0])):
-  CumuFlow[0][i]="Story ID"+str(i+1)                #assign issue ID's for initial stories
-  CumuFlow[1][i]=randint(4,16)                      #assign Ready times (hours) for initial stories, between 4 and 16 hours
-  CumuFlow[4][i]=startDate                          #set created date for initial stories
+def initialiseCumuFlow():      
+    # set up randomized values for initial stories in CumuFlow
+    for i in range(len(CumuFlow[0])):
+      CumuFlow[0][i]="Story ID"+str(i+1)                #assign issue ID's for initial stories
+      CumuFlow[1][i]=randint(4,16)                      #assign Ready times (hours) for initial stories, between 4 and 16 hours
+      CumuFlow[4][i]=startDate                          #set created date for initial stories
 
-# set up randomized values for developer capacity in DevTime
-for i in range(1,len(DevTime)-4):
-  for j in range(len(DevTime[i])):
-    if absenceLength==0 and randint(1,100) < 20: #chance of developer absence (if not already absent)
-      absenceLength=randint(1,4) #length of developer absence (days)
+def initialiseDevTime():
+    # set up randomized values for developer capacity in DevTime
+    absenceLength=0
+    currentDate=startDate
+    for dayloop in range(0,lengthDevDays):
+      for devloop in range(1,len(DevTime)-4): #for each developer
+        if absenceLength==0 and randint(1,100) < 20: #chance of developer absence (if not already absent)
+          absenceLength=randint(1,4) #length of developer absence (days)
 
-    DevTime[0][j]=(startDate + datetime.timedelta(days=j))
+        DevTime[0][dayloop]=currentDate
+        
+        if absenceLength > 0:
+          DevTime[devloop][dayloop]=0
+          absenceLength=absenceLength-1
+        else:
+          DevTime[devloop][dayloop]=randint(2,6) #assign capacity (hours) for the developer on that day
+      currentDate=currentDate + datetime.timedelta(days=1)
+      if currentDate.strftime("%A")=="Saturday":
+        currentDate=currentDate + datetime.timedelta(days=2)
     
-    if absenceLength > 0:
-      DevTime[i][j]=0
-      absenceLength=absenceLength-1
-    else:
-      DevTime[i][j]=randint(2,6) #assign capacity (hours) for the developer on that day 
   
+#----------------------------------------------------------------------------------------------------------------------
+# MAIN
+#----------------------------------------------------------------------------------------------------------------------
+
+initialiseCumuFlow()
+initialiseDevTime()
+
 #print initial state
 printCumuFlow()
 printDevTime()
 
-#---------------------------------------------------------------------------------------  
-#main loop - complete stories
 #for each date - for each developer - work on story to complete phase
-
 currentDate=startDate
 while max(CumuFlow[1])+max(CumuFlow[2])+max(CumuFlow[3])>0: #work remaining
   indexCurrentDate=DevTime[0].index(currentDate)
@@ -102,7 +112,10 @@ while max(CumuFlow[1])+max(CumuFlow[2])+max(CumuFlow[3])>0: #work remaining
   DevTime[8][indexCurrentDate]=sum([1 for x in CumuFlow[3] if x > 0]) #CountReview
   DevTime[9][indexCurrentDate]=sum([1 for x in CumuFlow[7] if x <>0]) #CountDone
    
-  currentDate=currentDate + datetime.timedelta(days=1) 
+  currentDate=currentDate + datetime.timedelta(days=1)
+  if currentDate.strftime("%A")=="Saturday":
+    currentDate=currentDate + datetime.timedelta(days=2)
+    
   if currentDate not in DevTime[0]:
     break
       
