@@ -6,7 +6,7 @@ numStories=15
 numDevs=5
 lengthDevDays=120
 CumuFlow=[[0 for j in range(numStories)] for i in range(8)] #IssueID,ReadyHrs,InProgressHrs,InReviewHrs,Created,ReadyCmp,InProgressCmp,ReviewCmp
-DevTime=[[0 for j in range(lengthDevDays)] for i in range(numDevs+5)] # + Date, CountGrooming,CountWIP,CountReview,CountDone
+DevTime=[[0 for j in range(lengthDevDays)] for i in range(numDevs+7)] # + Date, CountGrooming,CountWIP,CountReview,CountDone,Estimate1,Estimate2
 startDate=datetime.datetime(2017,12,1)
 InProgress_From=8
 InProgress_To=80
@@ -21,7 +21,7 @@ def printCumuFlow():
 def printDevTime():  
     print "Date, Dev#1,Dev#2,Dev#3,Dev#4,Dev#5,CountGrooming,CountWIP,CountReview,CountDone"
     for j in range(lengthDevDays):
-      print "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"  %(DevTime[0][j],DevTime[6][j],DevTime[7][j],DevTime[8][j],DevTime[9][j],DevTime[1][j],DevTime[2][j],DevTime[3][j],DevTime[4][j],DevTime[5][j])
+      print "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"  %(DevTime[0][j],DevTime[6][j],DevTime[7][j],DevTime[8][j],DevTime[9][j],DevTime[1][j],DevTime[2][j],DevTime[3][j],DevTime[4][j],DevTime[5][j],DevTime[10][j],DevTime[11][j])
 
 def workOnStories(theDate, phase, devID):
     indexCurrentDate=DevTime[0].index(theDate)
@@ -94,7 +94,10 @@ def initialiseDevTime():
       currentDate=currentDate + datetime.timedelta(days=1)
       if currentDate.strftime("%A")=="Saturday":
         currentDate=currentDate + datetime.timedelta(days=2)
-    
+
+def calcLinearExtrapolation(totalNumberOfStories,storiesCompletedSoFar,daysSinceProjectStart):
+    #returns remaining number of days required on project to complete all remaining stories
+    return (daysSinceProjectStart / storiesCompletedSoFar) * (totalNumberOfStories-storiesCompletedSoFar)
   
 #----------------------------------------------------------------------------------------------------------------------
 # MAIN
@@ -122,7 +125,30 @@ while max(CumuFlow[1])+max(CumuFlow[2])+max(CumuFlow[3])>0: #work remaining
   DevTime[7][indexCurrentDate]=sum([1 for x in CumuFlow[2] if x > 0]) #CountWIP
   DevTime[8][indexCurrentDate]=sum([1 for x in CumuFlow[3] if x > 0]) #CountReview
   DevTime[9][indexCurrentDate]=sum([1 for x in CumuFlow[7] if x <>0]) #CountDone
-   
+  if DevTime[9][indexCurrentDate]>0: #wait until one story done before calculating estimate
+    DevTime[10][indexCurrentDate]=currentDate + \
+        datetime.timedelta(days=calcLinearExtrapolation(
+                                                        totalNumberOfStories   = len(CumuFlow[0]),
+                                                        storiesCompletedSoFar  = DevTime[9][indexCurrentDate],
+                                                        daysSinceProjectStart  = (currentDate-startDate).days
+                                                       ))
+  if DevTime[9][indexCurrentDate]>5: #wait until six stories done before calculating rolling last five rate estimate  
+    #check currentDate-1 until stories done<=5 less than currently
+    referenceDate =currentDate
+    indexReferenceDate=DevTime[0].index(referenceDate)
+    while (DevTime[9][indexCurrentDate]) - (DevTime[9][indexReferenceDate]) < 5:
+        referenceDate = referenceDate - datetime.timedelta(days=1)
+        if referenceDate.strftime("%A")=="Sunday":
+            referenceDate=referenceDate - datetime.timedelta(days=2)
+        indexReferenceDate=DevTime[0].index(referenceDate)
+
+    DevTime[11][indexCurrentDate]=currentDate + \
+        datetime.timedelta(days=calcLinearExtrapolation(
+                                                        totalNumberOfStories   = len(CumuFlow[0])-DevTime[9][indexReferenceDate],
+                                                        storiesCompletedSoFar  = DevTime[9][indexCurrentDate]-DevTime[9][indexReferenceDate],
+                                                        daysSinceProjectStart  = (currentDate-referenceDate).days
+                                                       ))
+                                                        
   currentDate=currentDate + datetime.timedelta(days=1)
   if currentDate.strftime("%A")=="Saturday":
     currentDate=currentDate + datetime.timedelta(days=2)
