@@ -2,17 +2,6 @@ from random import *
 import datetime
 import os
 
-numStories=15
-numDevs=5
-lengthDevDays=120
-CumuFlow=[[0 for j in range(numStories)] for i in range(8)] #IssueID,ReadyHrs,InProgressHrs,InReviewHrs,Created,ReadyCmp,InProgressCmp,ReviewCmp
-DevTime=[[0 for j in range(lengthDevDays)] for i in range(numDevs+7)] # + Date, CountGrooming,CountWIP,CountReview,CountDone,Estimate1,Estimate2
-startDate=datetime.datetime(2017,12,1)
-InProgress_From=8
-InProgress_To=80
-Review_From=2
-Review_To=8
-
 def printCumuFlow():
     print "IssueID,ReadyHrs,InProgressHrs,InReviewHrs,Created,ReadyCmp,InProgressCmp,ReviewCmp"
     for j in range(len(CumuFlow[0])):
@@ -103,62 +92,76 @@ def calcLinearExtrapolation(totalNumberOfStories,storiesCompletedSoFar,daysSince
 # MAIN
 #----------------------------------------------------------------------------------------------------------------------
 
-initialiseCumuFlow()
-initialiseDevTime()
+    #monte carlo loop - run simulation many times
+for mcloop in range(0,1000):
+    numStories=15
+    numDevs=5
+    lengthDevDays=250
+    CumuFlow=[[0 for j in range(numStories)] for i in range(8)] #IssueID,ReadyHrs,InProgressHrs,InReviewHrs,Created,ReadyCmp,InProgressCmp,ReviewCmp
+    DevTime=[[0 for j in range(lengthDevDays)] for i in range(numDevs+7)] # + Date, CountGrooming,CountWIP,CountReview,CountDone,Estimate1,Estimate2
+    startDate=datetime.datetime(2017,12,1)
+    InProgress_From=8
+    InProgress_To=80
+    Review_From=2
+    Review_To=8
 
-#print initial state
-printCumuFlow()
-printDevTime()
+    initialiseCumuFlow()
+    initialiseDevTime()
 
-#for each date - for each developer - work on story to complete phase
-currentDate=startDate
-while max(CumuFlow[1])+max(CumuFlow[2])+max(CumuFlow[3])>0: #work remaining
-  indexCurrentDate=DevTime[0].index(currentDate)
+    #print initial state
+    #printCumuFlow()
+    #printDevTime()
 
-  for i in range(0,numDevs): #for each developer on given day
-      workOnStories(theDate = currentDate, phase = "Review", devID = i+1)
-      workOnStories(theDate = currentDate, phase = "InProgress", devID = i+1)
-      workOnStories(theDate = currentDate, phase = "Groom", devID = i+1)
+    #for each date - for each developer - work on story to complete phase
+    currentDate=startDate
+    while max(CumuFlow[1])+max(CumuFlow[2])+max(CumuFlow[3])>0: #work remaining
+      indexCurrentDate=DevTime[0].index(currentDate)
 
-  #track numbers in each phase for each day
-  DevTime[6][indexCurrentDate]=sum([1 for x in CumuFlow[1] if x > 0]) #CountGrooming
-  DevTime[7][indexCurrentDate]=sum([1 for x in CumuFlow[2] if x > 0]) #CountWIP
-  DevTime[8][indexCurrentDate]=sum([1 for x in CumuFlow[3] if x > 0]) #CountReview
-  DevTime[9][indexCurrentDate]=sum([1 for x in CumuFlow[7] if x <>0]) #CountDone
-  if DevTime[9][indexCurrentDate]>0: #wait until one story done before calculating estimate
-    DevTime[10][indexCurrentDate]=currentDate + \
-        datetime.timedelta(days=calcLinearExtrapolation(
-                                                        totalNumberOfStories   = len(CumuFlow[0]),
-                                                        storiesCompletedSoFar  = DevTime[9][indexCurrentDate],
-                                                        daysSinceProjectStart  = (currentDate-startDate).days
-                                                       ))
-  if DevTime[9][indexCurrentDate]>5: #wait until six stories done before calculating rolling last five rate estimate  
-    #check currentDate-1 until stories done<=5 less than currently
-    referenceDate =currentDate
-    indexReferenceDate=DevTime[0].index(referenceDate)
-    while (DevTime[9][indexCurrentDate]) - (DevTime[9][indexReferenceDate]) < 5:
-        referenceDate = referenceDate - datetime.timedelta(days=1)
-        if referenceDate.strftime("%A")=="Sunday":
-            referenceDate=referenceDate - datetime.timedelta(days=2)
+      for i in range(0,numDevs): #for each developer on given day
+          workOnStories(theDate = currentDate, phase = "Review", devID = i+1)
+          workOnStories(theDate = currentDate, phase = "InProgress", devID = i+1)
+          workOnStories(theDate = currentDate, phase = "Groom", devID = i+1)
+
+      #track numbers in each phase for each day
+      DevTime[6][indexCurrentDate]=sum([1 for x in CumuFlow[1] if x > 0]) #CountGrooming
+      DevTime[7][indexCurrentDate]=sum([1 for x in CumuFlow[2] if x > 0]) #CountWIP
+      DevTime[8][indexCurrentDate]=sum([1 for x in CumuFlow[3] if x > 0]) #CountReview
+      DevTime[9][indexCurrentDate]=sum([1 for x in CumuFlow[7] if x <>0]) #CountDone
+      if DevTime[9][indexCurrentDate]>0: #wait until one story done before calculating estimate
+        DevTime[10][indexCurrentDate]=currentDate + \
+            datetime.timedelta(days=calcLinearExtrapolation(
+                                                            totalNumberOfStories   = len(CumuFlow[0]),
+                                                            storiesCompletedSoFar  = DevTime[9][indexCurrentDate],
+                                                            daysSinceProjectStart  = (currentDate-startDate).days
+                                                           ))
+      if DevTime[9][indexCurrentDate]>5: #wait until six stories done before calculating rolling last five rate estimate  
+        #check currentDate-1 until stories done<=5 less than currently
+        referenceDate =currentDate
         indexReferenceDate=DevTime[0].index(referenceDate)
+        while (DevTime[9][indexCurrentDate]) - (DevTime[9][indexReferenceDate]) < 5:
+            referenceDate = referenceDate - datetime.timedelta(days=1)
+            if referenceDate.strftime("%A")=="Sunday":
+                referenceDate=referenceDate - datetime.timedelta(days=2)
+            indexReferenceDate=DevTime[0].index(referenceDate)
 
-    DevTime[11][indexCurrentDate]=currentDate + \
-        datetime.timedelta(days=calcLinearExtrapolation(
-                                                        totalNumberOfStories   = len(CumuFlow[0])-DevTime[9][indexReferenceDate],
-                                                        storiesCompletedSoFar  = DevTime[9][indexCurrentDate]-DevTime[9][indexReferenceDate],
-                                                        daysSinceProjectStart  = (currentDate-referenceDate).days
-                                                       ))
-                                                        
-  currentDate=currentDate + datetime.timedelta(days=1)
-  if currentDate.strftime("%A")=="Saturday":
-    currentDate=currentDate + datetime.timedelta(days=2)
-    
-  if currentDate not in DevTime[0]:
-    break
-      
-printCumuFlow()
-printDevTime()
-if max(CumuFlow[1])+max(CumuFlow[2])+max(CumuFlow[3])==0:
-    print "Project completed on %s" %(CumuFlow[7][CumuFlow[7].index(max(CumuFlow[7]))]).strftime("%d/%m/%Y")
-else:
+        DevTime[11][indexCurrentDate]=currentDate + \
+            datetime.timedelta(days=calcLinearExtrapolation(
+                                                            totalNumberOfStories   = len(CumuFlow[0])-DevTime[9][indexReferenceDate],
+                                                            storiesCompletedSoFar  = DevTime[9][indexCurrentDate]-DevTime[9][indexReferenceDate],
+                                                            daysSinceProjectStart  = (currentDate-referenceDate).days
+                                                           ))
+                                                            
+      currentDate=currentDate + datetime.timedelta(days=1)
+      if currentDate.strftime("%A")=="Saturday":
+        currentDate=currentDate + datetime.timedelta(days=2)
+        
+      if currentDate not in DevTime[0]:
+        break
+          
+    #printCumuFlow()
+    #printDevTime()
+    if max(CumuFlow[1])+max(CumuFlow[2])+max(CumuFlow[3])==0:
+        print "Project completed on %s" %(CumuFlow[7][CumuFlow[7].index(max(CumuFlow[7]))]).strftime("%d/%m/%Y")
+    else:
         print "Project ran out of time"
+print "Finished"
