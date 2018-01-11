@@ -92,11 +92,11 @@ def calcLinearExtrapolation(totalNumberOfStories,storiesCompletedSoFar,daysSince
 # MAIN
 #----------------------------------------------------------------------------------------------------------------------
 
-    #monte carlo loop - run simulation many times
+#monte carlo loop - run simulation many times
 for mcloop in range(0,1000):
     numStories=15
     numDevs=5
-    lengthDevDays=250
+    lengthDevDays=450
     CumuFlow=[[0 for j in range(numStories)] for i in range(8)] #IssueID,ReadyHrs,InProgressHrs,InReviewHrs,Created,ReadyCmp,InProgressCmp,ReviewCmp
     DevTime=[[0 for j in range(lengthDevDays)] for i in range(numDevs+7)] # + Date, CountGrooming,CountWIP,CountReview,CountDone,Estimate1,Estimate2
     startDate=datetime.datetime(2017,12,1)
@@ -121,6 +121,20 @@ for mcloop in range(0,1000):
           workOnStories(theDate = currentDate, phase = "Review", devID = i+1)
           workOnStories(theDate = currentDate, phase = "InProgress", devID = i+1)
           workOnStories(theDate = currentDate, phase = "Groom", devID = i+1)
+          
+      #every four weeks (grooming meeting) add 0-2 new stories
+      if currentDate.strftime("%A")=="Monday" and currentDate.isocalendar()[1] % 4 == 0: #Monday every fourth week
+            numNewStories=randint(0,2)
+            while numNewStories>0:
+                CumuFlow[0].append("New Story " + str(len(CumuFlow[0])+1))
+                CumuFlow[1].append(randint(8,32)) #amount of work for the new story
+                CumuFlow[2].append(0)
+                CumuFlow[3].append(0)
+                CumuFlow[4].append(currentDate) #creation date
+                CumuFlow[5].append(0)
+                CumuFlow[6].append(0)
+                CumuFlow[7].append(0)
+                numNewStories=numNewStories-1
 
       #track numbers in each phase for each day
       DevTime[6][indexCurrentDate]=sum([1 for x in CumuFlow[1] if x > 0]) #CountGrooming
