@@ -1,0 +1,35 @@
+developer:
+  - firstname: Andy 
+    lastname: Flatt	
+    capacity: 
+      - {from: 03/10/2017, to: 12/01/2018, minhours : 4.00, maxhours : 8.00}
+      - {from: 15/01/2017, to: 31/12/2018, minhours : 1.00, maxhours : 4.00}
+    skills:
+      - Architecture
+      - Java
+  - firstname: Rob
+    lastname: Rimmer
+    capacity: 
+      - {from: 03/10/2017, to: 12/01/2018, minhours : 4.00, maxhours : 8.00}
+      - {from: 15/01/2017, to: 31/12/2018, minhours : 1.00, maxhours : 4.00}
+    skills:
+      - C#
+backlogitem:
+  - id : VTEC-1
+    storypoints: 8
+    dependency:
+      - VTEC-12
+    skills:
+      - Java
+randomisation:
+  - num_initial_stories: 15
+  - grooming_hours: {from: 4, to: 16}
+  - inprogress_hours: {from: 8, to: 80}
+  - review_hours: {from: 2, to: 8}
+  - num_developers: 5
+  - developer_capacity_per_day_hours: {from: 2, to: 6}
+  - chance_of_bug_raised_percent: 30
+  - work_to_resolve_bug_hours: {from: 8, to: 32}
+  - chance_of_developer_absence_percent: 20
+  - length_of_developer_absence_days: {from: 1, to: 4}
+  - num_stories_added_every_4_weeks: {from: 0, to: 3}

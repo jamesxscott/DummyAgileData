@@ -1,4 +1,5 @@
 from random import *
+from ruamel.yaml import YAML
 import datetime
 import os
 
@@ -92,8 +93,34 @@ def calcLinearExtrapolation(totalNumberOfStories,storiesCompletedSoFar,daysSince
 # MAIN
 #----------------------------------------------------------------------------------------------------------------------
 
+#read configuration file
+yaml=YAML(typ='safe')
+with open ("agile_simu_input.yaml", "r") as myfile:
+    config_file=myfile.read()
+    config_data = yaml.load(config_file)
+print config_data['randomisation'][0]['num_initial_stories']
+print config_data['randomisation'][1]['grooming_hours']['from']
+print config_data['randomisation'][1]['grooming_hours']['to']
+print config_data['randomisation'][2]['inprogress_hours']['from']
+print config_data['randomisation'][2]['inprogress_hours']['to']
+print config_data['randomisation'][3]['review_hours']['from']
+print config_data['randomisation'][3]['review_hours']['to']
+print config_data['randomisation'][4]['num_developers']
+print config_data['randomisation'][5]['developer_capacity_per_day_hours']['from']
+print config_data['randomisation'][5]['developer_capacity_per_day_hours']['to']
+print config_data['randomisation'][6]['chance_of_bug_raised_percent']
+print config_data['randomisation'][7]['work_to_resolve_bug_hours']['from']
+print config_data['randomisation'][7]['work_to_resolve_bug_hours']['to']
+print config_data['randomisation'][8]['chance_of_developer_absence_percent']
+print config_data['randomisation'][9]['length_of_developer_absence_days']['from']
+print config_data['randomisation'][9]['length_of_developer_absence_days']['to']
+print config_data['randomisation'][10]['num_stories_added_every_4_weeks']['from']
+print config_data['randomisation'][10]['num_stories_added_every_4_weeks']['to']
+
+
+
 #monte carlo loop - run simulation many times
-for mcloop in range(0,1000):
+for mcloop in range(0,10):
     numStories=15
     numDevs=5
     lengthDevDays=450
