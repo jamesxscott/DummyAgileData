@@ -33,3 +33,4 @@ randomisation:
   - chance_of_developer_absence_percent: 20
   - length_of_developer_absence_days: {from: 1, to: 4}
   - num_stories_added_every_4_weeks: {from: 0, to: 3}
+  - start_date: 1/1/2018

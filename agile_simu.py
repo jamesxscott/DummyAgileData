@@ -3,6 +3,16 @@ from ruamel.yaml import YAML
 import datetime
 import os
 
+def initialiseCumuFlow():    
+    global TotalInitialWorkHrs 
+    # set up randomized values for initial stories in CumuFlow
+    for i in range(len(CumuFlow[0])):
+      CumuFlow[0][i]="Story ID"+str(i+1)                #assign issue ID's for initial stories
+      #assign Ready times (hours) for initial stories
+      CumuFlow[1][i]=randint(config_data['randomisation'][1]['grooming_hours']['from'],config_data['randomisation'][1]['grooming_hours']['to'])
+      CumuFlow[4][i]=startDate                          #set created date for initial stories
+      TotalInitialWorkHrs=TotalInitialWorkHrs+CumuFlow[1][i]
+
 def printCumuFlow():
     print "IssueID,ReadyHrs,InProgressHrs,InReviewHrs,Created,ReadyCmp,InProgressCmp,ReviewCmp"
     for j in range(len(CumuFlow[0])):
@@ -14,6 +24,7 @@ def printDevTime():
       print "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"  %(DevTime[0][j],DevTime[6][j],DevTime[7][j],DevTime[8][j],DevTime[9][j],DevTime[1][j],DevTime[2][j],DevTime[3][j],DevTime[4][j],DevTime[5][j],DevTime[10][j],DevTime[11][j])
 
 def workOnStories(theDate, phase, devID):
+    global TotalInitialWorkHrs, TotalBugsHrs
     indexCurrentDate=DevTime[0].index(theDate)
 
     if phase == "Review":
@@ -44,13 +55,18 @@ def workOnStories(theDate, phase, devID):
         CumuFlow[phaseCompletedColumn][indexMaxWorkToDo]=DevTime[0][indexCurrentDate] #note date complete
         if phase=="InProgress":
             CumuFlow[phaseWorkColumn+1][indexMaxWorkToDo]=randint(Review_From,Review_To) #generate Review randomized value
+            TotalInitialWorkHrs=TotalInitialWorkHrs+CumuFlow[phaseWorkColumn+1][indexMaxWorkToDo]
         elif phase=="Groom":
             CumuFlow[phaseWorkColumn+1][indexMaxWorkToDo]=randint(InProgress_From,InProgress_To) #generate Work In Progress randomized value
+            TotalInitialWorkHrs=TotalInitialWorkHrs+CumuFlow[phaseWorkColumn+1][indexMaxWorkToDo]
         elif phase=="Review": #issue completed
-            if randint(1,10)<=3: #chance of bug being found
+            if randint(1,100)<=config_data['randomisation'][6]['chance_of_bug_raised_percent']: #chance of bug being found
                 #print "#create new bug"
                 CumuFlow[0].append("Bug for " + CumuFlow[0][indexMaxWorkToDo])
-                CumuFlow[1].append(randint(8,32)) #amount of work for the bug
+                #amount of work for the bug:
+                bug_work = randint(config_data['randomisation'][7]['work_to_resolve_bug_hours']['from'],config_data['randomisation'][7]['work_to_resolve_bug_hours']['to'])
+                CumuFlow[1].append(bug_work) 
+                TotalBugsHrs=TotalBugsHrs+bug_work
                 CumuFlow[2].append(0)
                 CumuFlow[3].append(0)
                 CumuFlow[4].append(theDate) #bug creation date
@@ -58,21 +74,16 @@ def workOnStories(theDate, phase, devID):
                 CumuFlow[6].append(0)
                 CumuFlow[7].append(0)
       
-def initialiseCumuFlow():      
-    # set up randomized values for initial stories in CumuFlow
-    for i in range(len(CumuFlow[0])):
-      CumuFlow[0][i]="Story ID"+str(i+1)                #assign issue ID's for initial stories
-      CumuFlow[1][i]=randint(4,16)                      #assign Ready times (hours) for initial stories, between 4 and 16 hours
-      CumuFlow[4][i]=startDate                          #set created date for initial stories
-
 def initialiseDevTime():
+    global AvgDevCapacity
     # set up randomized values for developer capacity in DevTime
     absenceLength=0
     currentDate=startDate
     for dayloop in range(0,lengthDevDays):
       for devloop in range(1,len(DevTime)-4): #for each developer
-        if absenceLength==0 and randint(1,100) < 20: #chance of developer absence (if not already absent)
-          absenceLength=randint(1,4) #length of developer absence (days)
+        if absenceLength==0 and randint(1,100) < config_data['randomisation'][8]['chance_of_developer_absence_percent']: 
+          #if --- chance of developer absence (if not already absent) then --- length of developer absence (days)
+          absenceLength=randint(config_data['randomisation'][9]['length_of_developer_absence_days']['from'],config_data['randomisation'][9]['length_of_developer_absence_days']['to']) 
 
         DevTime[0][dayloop]=currentDate
         
@@ -80,7 +91,9 @@ def initialiseDevTime():
           DevTime[devloop][dayloop]=0
           absenceLength=absenceLength-1
         else:
-          DevTime[devloop][dayloop]=randint(2,6) #assign capacity (hours) for the developer on that day
+          #assign capacity (hours) for the developer on that day
+          DevTime[devloop][dayloop]=randint(config_data['randomisation'][5]['developer_capacity_per_day_hours']['from'],config_data['randomisation'][5]['developer_capacity_per_day_hours']['to']) 
+          AvgDevCapacity=AvgDevCapacity+DevTime[devloop][dayloop]
       currentDate=currentDate + datetime.timedelta(days=1)
       if currentDate.strftime("%A")=="Saturday":
         currentDate=currentDate + datetime.timedelta(days=2)
@@ -98,40 +111,30 @@ yaml=YAML(typ='safe')
 with open ("agile_simu_input.yaml", "r") as myfile:
     config_file=myfile.read()
     config_data = yaml.load(config_file)
-print config_data['randomisation'][0]['num_initial_stories']
-print config_data['randomisation'][1]['grooming_hours']['from']
-print config_data['randomisation'][1]['grooming_hours']['to']
-print config_data['randomisation'][2]['inprogress_hours']['from']
-print config_data['randomisation'][2]['inprogress_hours']['to']
-print config_data['randomisation'][3]['review_hours']['from']
-print config_data['randomisation'][3]['review_hours']['to']
-print config_data['randomisation'][4]['num_developers']
-print config_data['randomisation'][5]['developer_capacity_per_day_hours']['from']
-print config_data['randomisation'][5]['developer_capacity_per_day_hours']['to']
-print config_data['randomisation'][6]['chance_of_bug_raised_percent']
-print config_data['randomisation'][7]['work_to_resolve_bug_hours']['from']
-print config_data['randomisation'][7]['work_to_resolve_bug_hours']['to']
-print config_data['randomisation'][8]['chance_of_developer_absence_percent']
-print config_data['randomisation'][9]['length_of_developer_absence_days']['from']
-print config_data['randomisation'][9]['length_of_developer_absence_days']['to']
-print config_data['randomisation'][10]['num_stories_added_every_4_weeks']['from']
-print config_data['randomisation'][10]['num_stories_added_every_4_weeks']['to']
 
 
 
 #monte carlo loop - run simulation many times
-for mcloop in range(0,10):
-    numStories=15
-    numDevs=5
+print "ProjectCompleteDate,TotalInitialWorkHrs,NumDevs,AvgDevCapacity,TotalBugsHrs,TotalAddedStoriesHrs"
+for mcloop in range(0,1000):
+    numStories=config_data['randomisation'][0]['num_initial_stories']
+    numDevs=config_data['randomisation'][4]['num_developers']
     lengthDevDays=450
     CumuFlow=[[0 for j in range(numStories)] for i in range(8)] #IssueID,ReadyHrs,InProgressHrs,InReviewHrs,Created,ReadyCmp,InProgressCmp,ReviewCmp
     DevTime=[[0 for j in range(lengthDevDays)] for i in range(numDevs+7)] # + Date, CountGrooming,CountWIP,CountReview,CountDone,Estimate1,Estimate2
-    startDate=datetime.datetime(2017,12,1)
-    InProgress_From=8
-    InProgress_To=80
-    Review_From=2
-    Review_To=8
-
+    startDate=datetime.datetime.strptime(config_data['randomisation'][11]['start_date'], "%d/%m/%Y")
+    InProgress_From=config_data['randomisation'][2]['inprogress_hours']['from']
+    InProgress_To=config_data['randomisation'][2]['inprogress_hours']['to']
+    Review_From=config_data['randomisation'][3]['review_hours']['from']
+    Review_To=config_data['randomisation'][3]['review_hours']['to']
+    AvgDevCapacity=0
+    AvgGroomingHrs=0
+    AvgInProgressHrs=0
+    AvgReviewHrs=0
+    TotalBugsHrs=0
+    TotalAddedStoriesHrs=0
+    TotalInitialWorkHrs=0
+    
     initialiseCumuFlow()
     initialiseDevTime()
 
@@ -151,10 +154,13 @@ for mcloop in range(0,10):
           
       #every four weeks (grooming meeting) add 0-2 new stories
       if currentDate.strftime("%A")=="Monday" and currentDate.isocalendar()[1] % 4 == 0: #Monday every fourth week
-            numNewStories=randint(0,2)
+            numNewStories=randint(config_data['randomisation'][10]['num_stories_added_every_4_weeks']['from'],config_data['randomisation'][10]['num_stories_added_every_4_weeks']['to'])
             while numNewStories>0:
                 CumuFlow[0].append("New Story " + str(len(CumuFlow[0])+1))
-                CumuFlow[1].append(randint(8,32)) #amount of work for the new story
+                #amount of work for the new story:
+                newstory_work = randint(config_data['randomisation'][1]['grooming_hours']['from'],config_data['randomisation'][1]['grooming_hours']['to'])
+                CumuFlow[1].append(newstory_work) 
+                TotalAddedStoriesHrs=TotalAddedStoriesHrs+newstory_work
                 CumuFlow[2].append(0)
                 CumuFlow[3].append(0)
                 CumuFlow[4].append(currentDate) #creation date
@@ -198,11 +204,20 @@ for mcloop in range(0,10):
         
       if currentDate not in DevTime[0]:
         break
-          
+    
+    #calculate Average Dev Capacity over whole project
+    AvgDevCapacity=AvgDevCapacity-sum(DevTime[1])
+    AvgDevCapacity=AvgDevCapacity-sum(DevTime[2])
+    AvgDevCapacity=AvgDevCapacity-sum(DevTime[3])
+    AvgDevCapacity=AvgDevCapacity-sum(DevTime[4])
+    AvgDevCapacity=AvgDevCapacity-sum(DevTime[5])
+    #remove remaining hours in DevTime and divide by number of developers
+    AvgDevCapacity=AvgDevCapacity/5
+
     #printCumuFlow()
     #printDevTime()
     if max(CumuFlow[1])+max(CumuFlow[2])+max(CumuFlow[3])==0:
-        print "Project completed on %s" %(CumuFlow[7][CumuFlow[7].index(max(CumuFlow[7]))]).strftime("%d/%m/%Y")
+        print "%s,%s,%s,%s,%s,%s" %((CumuFlow[7][CumuFlow[7].index(max(CumuFlow[7]))]).strftime("%d/%m/%Y"),TotalInitialWorkHrs,numDevs,AvgDevCapacity,TotalBugsHrs,TotalAddedStoriesHrs)
     else:
-        print "Project ran out of time"
+        print "%s,%s,%s,%s,%s,%s" %("Project ran out of time",TotalInitialWorkHrs,numDevs,AvgDevCapacity,TotalBugsHrs,TotalAddedStoriesHrs)
 print "Finished"
